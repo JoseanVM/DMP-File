@@ -1,0 +1,248 @@
+---
+title: "Analysis of the Crimes in Chicago during the Super Bowl"
+author: "Josean Velazquez"
+date: "March 19, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls(all = TRUE))  # resets R to fresh
+library(chron)
+require("sfsmisc")
+require("ppcor")
+```
+
+
+Reads the Chicago crime into a data frema called vdat
+```{r Data Used}
+
+vdat = read.table("chicago_crimes_by_day_and_hour_2001_to_2017.csv",header=T,as.is=T,sep=",") 
+
+head(vdat)
+#Reads the chigaco crime into a data frame called vdat
+
+vdat$batteries_nodomestic = vdat$batteries - vdat$batteries_domestic
+
+#Calculates the number of batteries assaults that are nor domestic
+
+superbowl = read.csv("Superbowl_Data_Velazquez.csv")
+head(superbowl)
+# Reads the Superbowl Sunday data
+
+superbowl$jul = julian(superbowl$Month,superbowl$Day,superbowl$Year)
+
+
+#uses the function julian to turn the month/day/year in to a single code for reference later
+
+sunday = subset(vdat,jul%in%superbowl$jul) 
+#Selects the number of crimes on Super Bowl Sunday
+head(sunday)
+
+weekbefore = subset(vdat,(jul-7)%in%sunday$jul) 
+#Selects the number of crimes a week before Super Bowl Sunday
+head(weekbefore)
+
+weekafter = subset(vdat,(jul+7)%in%sunday$jul)
+#Selects the number of crimes a week after Super Bowl Sunday
+head(weekafter)
+
+
+mult.fig(9,oma=c(0,0,3,1),mar=c(3,3,1,0),main="Avg \043 crimes by hour on SuperBowl Sunday") 
+# Opens a field to plot out the graphs
+
+for (y in c("batteries_nodomestic",
+            "batteries_domestic","burglaries",
+"thefts","mv_thefts","prostitution" ,"narcotics")){  
+  # Loops through the crimes
+  
+
+  
+  sig = (aggregate(sunday[,y],by=list(sunday$hour),FUN="sd",na.rm=TRUE)[,2])
+  #Calculates the sigma or the standard deviation
+  
+  SCrime = (aggregate(sunday[,y],by=list(sunday$hour),FUN="mean",na.rm=TRUE)[,2])
+  #Calculates the mean of the crimes on SuperBowl Sunday 
+  
+  
+  BCrime = (aggregate(weekbefore[,y],by=list(sunday$hour),FUN="mean")[,2]) 
+  #Calculates the mean of the crimes the week beore SuperBowl Sunday
+  
+  ACrime =  (aggregate(weekafter[,y],by=list(sunday$hour),FUN="mean") [,2]) 
+  #Calculates the mean of the crimes the week after SuperBowl Sunday
+  
+  averagecrime = ((BCrime + ACrime)/2) 
+  #Calculates the average of the crime means of the week before and the week after Superbowl Sunday
+  SE = (sig/sqrt(408)) #Takes the Standar error
+  
+  ymin = min(c(SCrime, averagecrime)) 
+  #Sets the min limit of the y axes
+  ymax = max(c(SCrime, averagecrime))
+  #Sets the max limit of the y axes
+  
+  plot(0:23,SCrime,xlab="Hour of day",ylab="\043 per hour",col = "blue",main=paste("Crime", y, 
+   split = ""),ylim=c(ymin,ymax), lwd=3)
+  par(new=T)
+  plot(0:23,averagecrime,type="l",col="black",axes=F,xaxt="n",yaxt="n",xlab="",ylab="",lwd = 3)
+  #Plots the hours of the day(x) and the number of crimes commited per hour(y) for all crimes
+  
+  
+  
+  points(0:23,(SCrime-SE),col = "red", pch = 25)
+  points(0:23,(SCrime+SE), col = "red", pch = 24)
+  # Plots the standar deviation
+  
+  
+  
+abline(v=17.5, col="green", lty=2, lwd=2) #Sets the start of the superbowl
+}
+
+plot(0,axes=F,xaxt="n",yaxt="n",col=0,xlab="",ylab="",ylim=c(-15,15), xlim=c(-15,15))
+legend("bottomright",
+       legend = c("Mean # Super Bowl Sundays", 
+                  "Mean # baseline","Std error on the mean",
+                  "Begin time of Super Bowl"),
+       col=c("blue","black","red","green"), 
+       bty = "n",lwd=5,cex=0.7)
+
+#Creates the legend for the graphs 
+
+
+
+
+```
+
+
+
+```{r Analysis Mothers Days}
+#########
+#Part 1: Mothers Day.
+#The following code is very similar to the previous one. The main difference 
+#is the Holiday we are considering
+#and the data set of the holiday, in this case is Mothers Day
+#
+########
+
+mothersday_data = read.csv("mothersday_Velazquez.csv",header=T,as.is=T,sep=",")
+mothersday_data
+
+mothersday_data$jul = julian(mothersday_data$Month,mothersday_data$Day,mothersday_data$Year)
+
+
+Msunday = subset(vdat,jul%in%mothersday_data$jul)
+
+Mweekbefore = subset(vdat,(jul-7)%in%mothersday_data$jul)
+
+Mweekafter = subset(vdat,(jul+7)%in%mothersday_data$jul)
+
+mult.fig(9,oma=c(0,0,3,1),mar=c(3,3,1,0),main="Avg \043 crimes by hour on Mothers Day")
+
+for (y in c("batteries_nodomestic",
+            "batteries_domestic",
+            "burglaries","thefts","mv_thefts","prostitution" ,"narcotics")){
+
+  
+  Msig = (aggregate(Msunday[,y],by=list(Msunday$hour),FUN="sd",na.rm=TRUE)[,2])
+  
+  MCrime = (aggregate(Msunday[,y],by=list(Msunday$hour),FUN="mean",na.rm=TRUE)[,2])    
+  
+  
+  MBCrime = (aggregate(Mweekbefore[,y],by=list(Msunday$hour),FUN="mean")[,2]) 
+  MACrime =  (aggregate(Mweekafter[,y],by=list(Msunday$hour),FUN="mean") [,2])
+  
+  Maveragecrime = (MBCrime + MACrime)/2
+  Mymin = min(c(MCrime, Maveragecrime)) #Sets the min limit of the y axes
+  Mymax = max(c(MCrime, Maveragecrime)) #Sets the max limit of the y axes
+  
+  
+  plot(0:23,MCrime,xlab="Hour of day",ylab="\043 per hour",col = "blue",
+       main=paste( y, split = ""),
+       ylim=c(Mymin,Mymax), lwd=3)
+  par(new=T)
+  plot(0:23,Maveragecrime,type="l",col="black",axes=F,xaxt="n",yaxt="n",xlab="",ylab="",lwd = 3)
+  
+  MSE = (Msig/sqrt(408))
+  
+  
+  points(0:23,(MCrime-MSE),col = "red", pch = 25)
+  points(0:23,(MCrime+MSE), col = "red", pch = 24)
+  
+}
+
+plot(0,axes=F,xaxt="n",yaxt="n",col=0,xlab="",ylab="",ylim=c(-10,10), xlim=c(-10,10))
+legend("bottomright",
+       legend = c("Mean # Mothers Day Sundays", 
+                  "Mean # baseline","Std error on the mean"
+                  ),
+       col=c("blue","black","red"),
+       bty = "n",lwd=5,cex=0.7)
+
+
+```
+
+```{r Analysis Fathers Day}
+##################################################################
+#Part 2: Fathers Day.
+#The following code is very similar to the SuperBowl Crime program. The main difference is 
+#the Holiday we are considering
+#and the data set of the holiday, 
+#in this case is Fathers Day
+#
+#
+#################################################################
+fathersday = read.csv("fathersday_Velazquez.csv")
+fathersday
+
+fathersday$jul = julian(fathersday$Month,fathersday$Day,fathersday$Year)
+
+
+Fsunday = subset(vdat,jul%in%fathersday$jul)
+
+Fweekbefore = subset(vdat,(jul-7)%in%fathersday$jul)
+
+Fweekafter = subset(vdat,(jul+7)%in%fathersday$jul)
+
+
+mult.fig(9,oma=c(0,0,3,1),mar=c(3,3,1,0),main="Avg \043 crimes by hour on Fathers Day")
+
+for (y in c("batteries_nodomestic",
+            "batteries_domestic",
+            "burglaries","thefts","mv_thefts","prostitution" ,"narcotics")){  
+ 
+  
+  Fsig = (aggregate(Fsunday[,y],by=list(Fsunday$hour),FUN="sd",na.rm=TRUE)[,2])
+  
+  FCrime = (aggregate(Fsunday[,y],by=list(Fsunday$hour),FUN="mean",na.rm=TRUE)[,2])    
+  
+  
+  BFCrime = (aggregate(Fweekbefore[,y],by=list(Fsunday$hour),FUN="mean")[,2]) 
+  AFCrime =  (aggregate(Fweekafter[,y],by=list(Fsunday$hour),FUN="mean") [,2])
+  
+  Faveragecrime = (BFCrime + AFCrime)/2
+  
+  Fymin = min(c(FCrime, Faveragecrime)) #Sets the min limit of the y axes
+  Fymax = max(c(FCrime, Faveragecrime)) #Sets the max limit of the y axes
+  
+  
+  
+  plot(0:23,FCrime,xlab="Hour of day",ylab="\043 per hour",col = "blue",
+       main=paste( y, split = ""),ylim=c(Fymin,Fymax), lwd=3)
+  par(new=T)
+  plot(0:23,Faveragecrime,type="l",col="black",axes=F,xaxt="n",yaxt="n",xlab="",ylab="", lwd=3)
+  
+  FSE = (Fsig/sqrt(408))
+  
+  
+  points(0:23,(FCrime-FSE),col = "red", pch = 25)
+  points(0:23,(FCrime+FSE), col = "red", pch = 24)
+  
+}
+
+plot(0,axes=F,xaxt="n",yaxt="n",col=0,xlab="",ylab="",ylim=c(-10,10), xlim=c(-10,10))
+legend("bottomright",
+       legend = c("Mean # Fathers Day Sundays", 
+                  "Mean # baseline","Std error on the mean"),
+       col=c("blue","black","red"), 
+       bty = "n",lwd=5,cex=0.7)
+```
+
